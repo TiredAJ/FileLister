@@ -32,58 +32,86 @@ namespace FileLister
             {
                 case FileStructure.CSV:
                 {
-                    ToCSV();
+                    ToCSV(_FStream);
                     break; 
                 }
                 case FileStructure.JSON:
                 {
-                    ToJSON();
+                    ToJSON(_FStream);
                     break; 
                 }
                 case FileStructure.XML:
                 {
-                    ToXML();
+                    ToXML(_FStream);
                     break; 
                 }
                 case FileStructure.PT:
                 default:
                 {
-                    ToPT();
+                    ToPT(_FStream);
                     break; 
                 }
             }
         }
 
-        private string ToJSON()
+        private void ToJSON(FileStream _FStream)
         {
             if (DataToSerialize == null)
             {throw new Exception("Please use AddData() before using a To...() function");}
 
-            return JsonSerializer.Serialize(DataToSerialize, new JsonSerializerOptions 
+            //return JsonSerializer.Serialize(DataToSerialize, new JsonSerializerOptions 
+            //{ DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, WriteIndented = true });
+
+            JsonSerializer.Serialize((Stream)_FStream, DataToSerialize, new JsonSerializerOptions
             { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, WriteIndented = true });
         }
 
-        private string ToXML() 
+        private void ToXML(FileStream _FStream) 
         {
             if (DataToSerialize == null)
             { throw new Exception("Please use AddData() before using a To...() function"); }
 
             XmlSerializer XMLer = new XmlSerializer(typeof(DataDoc));
-            using (StringWriter Writer = new StringWriter())
-            {
-                XMLer.Serialize(Writer, DataToSerialize);
-                return Writer.ToString();
-            }
+
+            XMLer.Serialize((Stream)_FStream, DataToSerialize);
+
+            //using (StringWriter Writer = new StringWriter())
+            //{
+            //    XMLer.Serialize(Writer, DataToSerialize);
+            //    return Writer.ToString();
+            //}
         }
 
-        private string ToCSV()
+        private void ToCSV(FileStream _FStream)
         {
             if (DataToSerialize == null)
             { throw new Exception("Please use AddData() before using a To...() function"); }
 
+            String Separator = ",";
+
+            using (StreamWriter Writer = new StreamWriter(_FStream))
+            {
+                if (IsTpl)
+                {
+                    Writer.WriteLine("File Path \t File Name");
+
+                    foreach (var _File in DataToSerialize.FilesTpl)
+                    {Writer.WriteLine($"{_File.Item1}{Separator}{_File.Item2}");}
+                }
+                else
+                {
+                    if (FOptions[FileLayoutOptions.Path])
+                    {Writer.WriteLine("Path");}
+                    else if (FOptions[FileLayoutOptions.Name])
+                    {Writer.WriteLine("File Name");}
+
+                    foreach (var _File in DataToSerialize.Files)
+                    {Writer.WriteLine($"{_File}{Separator}");}
+                }
+            }
         }
 
-        private string ToPT()
+        private void ToPT(FileStream _FStream)
         {
             if (DataToSerialize == null)
             { throw new Exception("Please use AddData() before using a To...() function"); }
@@ -97,11 +125,19 @@ namespace FileLister
             if (FOptions[FileLayoutOptions.CS])
             {Separator += ", ";}
 
-            if (IsTpl)
+            using (StreamWriter Writer = new StreamWriter(_FStream))
             {
-
+                if (IsTpl)
+                {
+                    foreach (var _File in DataToSerialize.FilesTpl)
+                    {Writer.WriteLine($"{_File.Item1},{_File.Item2}{Separator}");}
+                }
+                else
+                {
+                    foreach (var _File in DataToSerialize.Files)
+                    {Writer.WriteLine($"{_File}{Separator}");}
+                }
             }
-
         }
     }
 

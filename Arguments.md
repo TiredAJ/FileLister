@@ -8,7 +8,7 @@
 ## File Options
 - ```/Path```	Returns full path (location + name + extension)
 - ```/Name```	Returns just the Name and extension of each file
-- ```/PN```		Returns the Path and Name (+ extension) of each file separately
+- ```/PN```		Returns the Path and Name (+ extension) of each file (separate)
 - ```/C```		(For -PT only) separates files by commas
 - ```/CS```		(For -PT only) separates files by commas and a trailing space
 - ```/nl```		(For -PT only) separates files by newlines

@@ -1,5 +1,5 @@
-﻿
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
+using System.Diagnostics;
 
 namespace FileLister
 {
@@ -10,8 +10,8 @@ namespace FileLister
             get { return ScanState; }
             set {Task.Run(() => { Console.WriteLine(ScanState); });}
         }
-        static List<FileInfo> Files = new List<FileInfo>();
-        static string CurrentPath = "";
+        static public List<FileInfo> Files = new List<FileInfo>();
+        static public string CurrentPath = "";
         static public Dictionary<FileLayoutOptions,bool> FOptions = new Dictionary<FileLayoutOptions, bool>()
         { 
             {FileLayoutOptions.Path, false },
@@ -21,11 +21,11 @@ namespace FileLister
             {FileLayoutOptions.CS, false },
             {FileLayoutOptions.NL, false }
         };
-        static FileStructure FStructure = FileStructure.PT;
-        static SearchOption SOption = SearchOption.TopDirectoryOnly;
-        static Converter Conv;
+        static public FileStructure FStructure = FileStructure.PT;
+        static public SearchOption SOption = SearchOption.TopDirectoryOnly;
+        static public Converter Conv;
 
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             if (args.Length > 0)
             {GetArguments(args);}
@@ -36,12 +36,16 @@ namespace FileLister
 
             CurrentPath = Directory.GetCurrentDirectory();
 
-            Task.Run(() =>
-            {
+            //Task.Run(() =>
+            //{
                 ScanState = ScanStates.Started;
-            
-                //Gets files from the current directory
-                Files = GetFiles(SOption);
+
+            //Gets files from the current directory
+            try
+            {Files = GetFiles(SOption);}
+            catch (Exception EXC)
+            {Debug.WriteLine(EXC.Message);}
+
 
                 ScanState = ScanStates.FilesScanned;
 
@@ -53,14 +57,66 @@ namespace FileLister
                 {Temp = GetFileData(Files);}
 
                 ScanState = ScanStates.CreatingFileList;
-                using (FileStream FStream = File.Create(Path.Combine(CurrentPath, "FileList.txt")))
+
+                if (File.Exists(Path.Combine(CurrentPath, "FileList.txt")))
                 {
-                    Conv.AddData(Temp, FOptions[FileLayoutOptions.PN]);
-                    ScanState = ScanStates.SerialisingData;
-                    Conv.Serialise(FStream, FStructure);
-                    ScanState = ScanStates.Finished;
+                    ScanState = ScanStates.Waiting;
+
+                    bool TempInputValid;
+
+                    do
+                    {
+                        TempInputValid = true;
+                        Console.WriteLine("FileList.txt already exists. What would you like to do?");
+                        Console.WriteLine("[O]verwrite, [A]ppend date, [C}ancel");
+
+                        ConsoleKeyInfo Input = Console.ReadKey();
+
+                        switch (Input.KeyChar)
+                        {
+                            case 'O':
+                            case 'o':
+                            {
+                                using (FileStream FStream = File.Create(Path.Combine(CurrentPath, "FileList.txt")))
+                                {
+                                    Conv.AddData(Temp, FOptions[FileLayoutOptions.PN]);
+                                    ScanState = ScanStates.SerialisingData;
+                                    Conv.Serialise(FStream, FStructure);
+                                    ScanState = ScanStates.Finished;
+                                }
+
+                                break;
+                            }
+                            case 'A':
+                            case 'a':
+                            {
+                                using 
+                                (
+                                    FileStream FStream = File.Create
+                                    (Path.Combine(CurrentPath, $"FileList{DateTime.Now.Date.ToString("dd-MM-YYYY")}.txt"))
+                                )
+                                {
+                                    Conv.AddData(Temp, FOptions[FileLayoutOptions.PN]);
+                                    ScanState = ScanStates.SerialisingData;
+                                    Conv.Serialise(FStream, FStructure);
+                                    ScanState = ScanStates.Finished;
+                                }
+
+                                break;
+                            }
+                            case 'c':
+                            case 'C':
+                            {return;}
+                            default:
+                            {
+                                Console.WriteLine("Please enter a valid option");
+                                TempInputValid = false;
+                                break;
+                            }
+                        }
+                    } while (TempInputValid);
                 }
-            });
+            //});
         }
 
         public static void GetArguments(string[] _Args)
@@ -154,7 +210,18 @@ namespace FileLister
         }
 
         public static List<FileInfo> GetFiles(SearchOption _SO)
-        {return new DirectoryInfo(CurrentPath).GetFiles("",_SO).ToList<FileInfo>();}
+        {//Program closes here "exited with code 3221225477 (0xc0000005) 'Access violation'."
+            Debug.WriteLine("Hmm?");
+
+            List<FileInfo> TempFiles = new List<FileInfo>();
+
+            try
+            {TempFiles = new DirectoryInfo(CurrentPath).GetFiles("",_SO).ToList<FileInfo>();}
+            catch (Exception EXC)
+            {Console.WriteLine(EXC.Message);}
+
+            return TempFiles;
+        }
 
         public static List<(string, string)> GetPN(List<FileInfo> _Files)
         {
@@ -199,7 +266,8 @@ namespace FileLister
             SerialisingData,
             Broke,
             Finished,
-            NotStarted
+            NotStarted,
+            Waiting
         }
     }
 

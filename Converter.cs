@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Text.Json;
-using System.Runtime.InteropServices;
-using System.Net;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Xml.Serialization;
 
@@ -36,23 +29,23 @@ namespace FileLister
                 case FileStructure.CSV:
                 {
                     ToCSV(_FStream);
-                    break; 
+                    break;
                 }
                 case FileStructure.JSON:
                 {
                     ToJSON(_FStream);
-                    break; 
+                    break;
                 }
                 case FileStructure.XML:
                 {
                     ToXML(_FStream);
-                    break; 
+                    break;
                 }
                 case FileStructure.PT:
                 default:
                 {
                     ToPT(_FStream);
-                    break; 
+                    break;
                 }
             }
         }
@@ -60,22 +53,33 @@ namespace FileLister
         private void ToJSON(FileStream _FStream)
         {
             if (DataToSerialize == null)
-            {throw new Exception("Please use AddData() before using a To...() function");}
+            { throw new Exception("Please use AddData() before using a To...() function"); }
+
+            if
+            ((IsTpl && DataToSerialize.FilesTpl == null) ||
+                (IsTpl && DataToSerialize.Files == null))
+            { throw new NullReferenceException("DataToSerialise.Files(Tpl) was null!"); }
 
             //return JsonSerializer.Serialize(DataToSerialize, new JsonSerializerOptions 
             //{ DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, WriteIndented = true });
 
             JsonSerializer.Serialize((Stream)_FStream, DataToSerialize, new JsonSerializerOptions
-            { 
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, 
-                WriteIndented = true, IncludeFields = true
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                WriteIndented = true,
+                IncludeFields = true
             });
         }
 
-        private void ToXML(FileStream _FStream) 
+        private void ToXML(FileStream _FStream)
         {
             if (DataToSerialize == null)
             { throw new Exception("Please use AddData() before using a To...() function"); }
+
+            if
+            ((IsTpl && DataToSerialize.FilesTpl == null) ||
+                (IsTpl && DataToSerialize.Files == null))
+            { throw new NullReferenceException("DataToSerialise.Files(Tpl) was null!"); }
 
             XmlSerializer XMLer = new XmlSerializer(typeof(DataDoc));
 
@@ -99,20 +103,27 @@ namespace FileLister
             {
                 if (IsTpl)
                 {
+                    if (DataToSerialize.FilesTpl == null)
+                    { throw new NullReferenceException("DataToSerialise.FilesTpl was null!"); }
+
                     Writer.WriteLine("File Path \t File Name");
 
                     foreach (var _File in DataToSerialize.FilesTpl)
-                    {Writer.WriteLine($"{_File.Item1}{Separator}{_File.Item2}");}
+                    { Writer.WriteLine($"{_File.Item1}{Separator}{_File.Item2}"); }
+
                 }
                 else
                 {
+                    if (DataToSerialize.Files == null)
+                    { throw new NullReferenceException("DataToSerialise.Files was null!"); }
+
                     if (FOptions[FileLayoutOptions.Path])
-                    {Writer.WriteLine("Path");}
+                    { Writer.WriteLine("Path"); }
                     else if (FOptions[FileLayoutOptions.Name])
-                    {Writer.WriteLine("File Name");}
+                    { Writer.WriteLine("File Name"); }
 
                     foreach (var _File in DataToSerialize.Files)
-                    {Writer.WriteLine($"{_File}{Separator}");}
+                    { Writer.WriteLine($"{_File}"); }
                 }
             }
         }
@@ -125,23 +136,29 @@ namespace FileLister
             string Separator = "";
 
             if (FOptions[FileLayoutOptions.C])
-            {Separator += ",";}
+            { Separator += ","; }
             if (FOptions[FileLayoutOptions.NL])
-            {Separator += "\n";}
+            { Separator += "\n"; }
             if (FOptions[FileLayoutOptions.CS])
-            {Separator += ", ";}
+            { Separator += ", "; }
 
             using (StreamWriter Writer = new StreamWriter(_FStream))
             {
                 if (IsTpl)
                 {
+                    if (DataToSerialize.FilesTpl == null)
+                    { throw new NullReferenceException("DataToSerialise.FilesTpl was null!"); }
+
                     foreach (var _File in DataToSerialize.FilesTpl)
-                    {Writer.WriteLine($"{_File.Item1},{_File.Item2}{Separator}");}
+                    { Writer.WriteLine($"{_File.Item1},{_File.Item2}{Separator}"); }
                 }
                 else
                 {
+                    if (DataToSerialize.Files != null)
+                    { throw new NullReferenceException("DataToSerialise.Files was null!"); }
+
                     foreach (var _File in DataToSerialize.Files)
-                    {Writer.WriteLine($"{_File}{Separator}");}
+                    { Writer.WriteLine($"{_File}{Separator}"); }
                 }
             }
         }
@@ -151,26 +168,24 @@ namespace FileLister
     public class DataDoc
     {
         [JsonPropertyName("Files")]
-        public List<string> Files { get; set; } = null;
+        public List<string>? Files { get; set; } = null;
 
         [XmlArray("File-Path")]
-        [XmlArrayItem("File")]       
-        public List<(string Filename, string Path)> FilesTpl { get; set; } = null;
+        [XmlArrayItem("File")]
+        public List<(string Filename, string Path)>? FilesTpl { get; set; } = null;
 
         public void AddData(object _FileData, bool _IsTplList)
         {
             if (_IsTplList)
             {
                 FilesTpl = new List<(string, string)>();
-                FilesTpl = (List<(string, string)>)_FileData; 
+                FilesTpl = (List<(string, string)>)_FileData;
             }
             else
             {
                 Files = new List<string>();
-                Files = (List<string>)_FileData; 
+                Files = (List<string>)_FileData;
             }
         }
     }
-
-
 }

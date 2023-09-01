@@ -1,15 +1,15 @@
-﻿using System.Runtime.CompilerServices;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace FileLister
 {
     public class Program
     {
+        #region Fields and shit
         static private ScanStates _ScanState { get; set; } = ScanStates.NotStarted;
-        static private ScanStates ScanState 
+        static private ScanStates ScanState
         {
             get => _ScanState;
-            set 
+            set
             {
                 if (value != _ScanState)
                 {
@@ -20,8 +20,8 @@ namespace FileLister
         }
         static private List<FileInfo> Files = new List<FileInfo>();
         static private string CurrentPath = "";
-        static private Dictionary<FileLayoutOptions,bool> FOptions = new Dictionary<FileLayoutOptions, bool>()
-        { 
+        static private Dictionary<FileLayoutOptions, bool> FOptions = new Dictionary<FileLayoutOptions, bool>()
+        {
             {FileLayoutOptions.Path, false },
             {FileLayoutOptions.Name, false },
             {FileLayoutOptions.PN, false },
@@ -32,34 +32,33 @@ namespace FileLister
         static private FileStructure FStructure = FileStructure.PT;
         static private SearchOption SOption = SearchOption.TopDirectoryOnly;
         static private Converter Conv;
+        #endregion
 
         public static void Main(string[] args)
         {
             if (args.Length > 0)
-            {GetArguments(args);}
+            { GetArguments(args); }
 
             Conv = new Converter(FOptions);
-
-            Console.WriteLine("ScanState Directory!");
 
             CurrentPath = Directory.GetCurrentDirectory();
 
             ScanState = ScanStates.Started;
 
-            //Gets files from the current directory
-            try
-            {Files = GetFiles(SOption);}
-            catch (Exception EXC)
-            {Debug.WriteLine(EXC.Message);}
+            CollectFiles();
 
             ScanState = ScanStates.FilesScanned;
 
-            object Temp = null;
+            //ToDo will rename eventually
+            object? Temp = null;
 
             if (FOptions[FileLayoutOptions.PN])
-            {Temp = GetPN(Files);}
+            { Temp = GetPN(Files); }
             else
-            {Temp = GetFileData(Files);}
+            { Temp = GetFileData(Files); }
+
+            if (Temp == null)
+            { throw new NullReferenceException("Temp was null!"); }
 
             ScanState = ScanStates.CreatingFileList;
 
@@ -67,7 +66,7 @@ namespace FileLister
             {
                 ScanState = ScanStates.Waiting;
 
-                bool TempInputValid = false;
+                bool TempInputValid;
 
                 do
                 {
@@ -95,7 +94,7 @@ namespace FileLister
                         }
                         case 'c':
                         case 'C':
-                        {return;}
+                        { return; }
                         default:
                         {
                             Console.WriteLine("Please enter a valid option");
@@ -106,7 +105,16 @@ namespace FileLister
                 } while (!TempInputValid);
             }
             else
-            {CreateFile(Temp, false);}
+            { CreateFile(Temp, false); }
+        }
+
+        private static void CollectFiles()
+        {
+            //Gets files from the current directory
+            try
+            { Files = GetFiles(SOption); }
+            catch (Exception EXC)
+            { Debug.WriteLine(EXC.Message); }
         }
 
         private static void CreateFile(object _Temp, bool _IncludeDate)
@@ -114,9 +122,9 @@ namespace FileLister
             string StrPath = string.Empty;
 
             if (_IncludeDate)
-            {StrPath = Path.Combine(CurrentPath, $"FileList{DateTime.Now.Date.ToString("dd-MM-YYYY")}.txt");}
+            { StrPath = Path.Combine(CurrentPath, $"FileList{DateTime.Now.Date.ToString("dd-MM-YYYY")}.txt"); }
             else
-            {StrPath = Path.Combine(CurrentPath, "FileList.txt");}
+            { StrPath = Path.Combine(CurrentPath, "FileList.txt"); }
 
             using (FileStream FStream = File.Create(StrPath))
             {
@@ -165,7 +173,7 @@ namespace FileLister
                 {
                     switch (arg.ToUpper())
                     {
-                        case "/PATH": 
+                        case "/PATH":
                         {
                             FOptions[FileLayoutOptions.Path] = true;
                             break;
@@ -201,7 +209,7 @@ namespace FileLister
                 else if (arg[0] == '+')
                 {
                     switch (arg.ToUpper())
-                    {                        
+                    {
                         case "+AD":
                         {
                             SOption = SearchOption.AllDirectories;
@@ -225,9 +233,9 @@ namespace FileLister
             List<FileInfo> TempFiles = new List<FileInfo>();
 
             try
-            {TempFiles = new DirectoryInfo(CurrentPath).GetFiles("",_SO).ToList<FileInfo>();}
+            { TempFiles = new DirectoryInfo(CurrentPath).GetFiles("", _SO).ToList<FileInfo>(); }
             catch (Exception EXC)
-            {Console.WriteLine(EXC.Message);}
+            { Console.WriteLine(EXC.Message); }
 
             return TempFiles;
         }
@@ -237,7 +245,7 @@ namespace FileLister
             List<(string, string)> Temp = new List<(string, string)>();
 
             foreach (var _File in _Files)
-            {Temp.Add(new (_File.Name, GetPath(_File.FullName)));}
+            { Temp.Add(new(_File.Name, GetPath(_File.FullName))); }
 
             return Temp;
         }
@@ -256,12 +264,12 @@ namespace FileLister
             if (FOptions[FileLayoutOptions.Name])
             {
                 foreach (var _File in _Files)
-                {Temp.Add(_File.Name);}
+                { Temp.Add(_File.Name); }
             }
             else if (FOptions[FileLayoutOptions.Path])
             {
                 foreach (var _File in _Files)
-                {Temp.Add(_File.FullName);}
+                { Temp.Add(_File.FullName); }
             }
 
             return Temp;

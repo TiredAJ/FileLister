@@ -5,6 +5,19 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ErrorReport>none</ErrorReport>
+    <Authors>TiredestAJ</Authors>
+    <Description>Basically allows you to list the files in a directory from CMD</Description>
+    <PackageProjectUrl>https://github.com/TiredAJ/FileLister</PackageProjectUrl>
+    <PackageReadmeFile>Arguments.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/TiredAJ/FileLister</RepositoryUrl>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="Arguments.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
 </Project>

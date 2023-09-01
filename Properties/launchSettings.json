@@ -2,7 +2,7 @@
   "profiles": {
     "FileCollector": {
       "commandName": "Project",
-      "commandLineArgs": "-CSV /PN +AD"
+      "commandLineArgs": "-JSON /PN +AD"
     }
   }
 }

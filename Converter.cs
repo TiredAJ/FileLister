@@ -23,6 +23,9 @@ namespace FileLister
         public void AddData(object _FileData, bool _IsTplList)
         {
             IsTpl = _IsTplList;
+
+            DataToSerialize = new DataDoc();
+
             DataToSerialize.AddData(_FileData, _IsTplList);
         }
 
@@ -63,7 +66,10 @@ namespace FileLister
             //{ DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, WriteIndented = true });
 
             JsonSerializer.Serialize((Stream)_FStream, DataToSerialize, new JsonSerializerOptions
-            { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, WriteIndented = true });
+            { 
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, 
+                WriteIndented = true, IncludeFields = true
+            });
         }
 
         private void ToXML(FileStream _FStream) 
@@ -73,7 +79,7 @@ namespace FileLister
 
             XmlSerializer XMLer = new XmlSerializer(typeof(DataDoc));
 
-            XMLer.Serialize((Stream)_FStream, DataToSerialize);
+            XMLer.Serialize(_FStream, DataToSerialize);
 
             //using (StringWriter Writer = new StringWriter())
             //{
@@ -141,13 +147,15 @@ namespace FileLister
         }
     }
 
-    [Serializable]
-    internal class DataDoc
+    [Serializable, XmlRoot("Root")]
+    public class DataDoc
     {
         [JsonPropertyName("Files")]
         public List<string> Files { get; set; } = null;
 
-        public List<(string, string)> FilesTpl { get; set; } = null;
+        [XmlArray("File-Path")]
+        [XmlArrayItem("File")]       
+        public List<(string Filename, string Path)> FilesTpl { get; set; } = null;
 
         public void AddData(object _FileData, bool _IsTplList)
         {

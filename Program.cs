@@ -5,14 +5,22 @@ namespace FileLister
 {
     public class Program
     {
-        static public ScanStates ScanState 
+        static private ScanStates _ScanState { get; set; } = ScanStates.NotStarted;
+        static private ScanStates ScanState 
         {
-            get { return ScanState; }
-            set {Task.Run(() => { Console.WriteLine(ScanState); });}
+            get => _ScanState;
+            set 
+            {
+                if (value != _ScanState)
+                {
+                    _ScanState = value;
+                    Console.WriteLine($"Status: {_ScanState}\n");
+                }
+            }
         }
-        static public List<FileInfo> Files = new List<FileInfo>();
-        static public string CurrentPath = "";
-        static public Dictionary<FileLayoutOptions,bool> FOptions = new Dictionary<FileLayoutOptions, bool>()
+        static private List<FileInfo> Files = new List<FileInfo>();
+        static private string CurrentPath = "";
+        static private Dictionary<FileLayoutOptions,bool> FOptions = new Dictionary<FileLayoutOptions, bool>()
         { 
             {FileLayoutOptions.Path, false },
             {FileLayoutOptions.Name, false },
@@ -21,9 +29,9 @@ namespace FileLister
             {FileLayoutOptions.CS, false },
             {FileLayoutOptions.NL, false }
         };
-        static public FileStructure FStructure = FileStructure.PT;
-        static public SearchOption SOption = SearchOption.TopDirectoryOnly;
-        static public Converter Conv;
+        static private FileStructure FStructure = FileStructure.PT;
+        static private SearchOption SOption = SearchOption.TopDirectoryOnly;
+        static private Converter Conv;
 
         public static void Main(string[] args)
         {
@@ -36,9 +44,7 @@ namespace FileLister
 
             CurrentPath = Directory.GetCurrentDirectory();
 
-            //Task.Run(() =>
-            //{
-                ScanState = ScanStates.Started;
+            ScanState = ScanStates.Started;
 
             //Gets files from the current directory
             try
@@ -46,80 +52,83 @@ namespace FileLister
             catch (Exception EXC)
             {Debug.WriteLine(EXC.Message);}
 
+            ScanState = ScanStates.FilesScanned;
 
-                ScanState = ScanStates.FilesScanned;
+            object Temp = null;
 
-                object Temp = null;
+            if (FOptions[FileLayoutOptions.PN])
+            {Temp = GetPN(Files);}
+            else
+            {Temp = GetFileData(Files);}
 
-                if (FOptions[FileLayoutOptions.PN])
-                {Temp = GetPN(Files);}
-                else
-                {Temp = GetFileData(Files);}
+            ScanState = ScanStates.CreatingFileList;
 
-                ScanState = ScanStates.CreatingFileList;
+            if (File.Exists(Path.Combine(CurrentPath, "FileList.txt")))
+            {
+                ScanState = ScanStates.Waiting;
 
-                if (File.Exists(Path.Combine(CurrentPath, "FileList.txt")))
+                bool TempInputValid = false;
+
+                do
                 {
-                    ScanState = ScanStates.Waiting;
+                    TempInputValid = true;
+                    Console.WriteLine("FileList.txt already exists. What would you like to do?");
+                    Console.WriteLine("[O]verwrite, [N]ew File, [C}ancel");
 
-                    bool TempInputValid;
+                    ConsoleKeyInfo Input = Console.ReadKey();
 
-                    do
+                    Console.WriteLine();
+
+                    switch (Input.KeyChar)
                     {
-                        TempInputValid = true;
-                        Console.WriteLine("FileList.txt already exists. What would you like to do?");
-                        Console.WriteLine("[O]verwrite, [A]ppend date, [C}ancel");
-
-                        ConsoleKeyInfo Input = Console.ReadKey();
-
-                        switch (Input.KeyChar)
+                        case 'O':
+                        case 'o':
                         {
-                            case 'O':
-                            case 'o':
-                            {
-                                using (FileStream FStream = File.Create(Path.Combine(CurrentPath, "FileList.txt")))
-                                {
-                                    Conv.AddData(Temp, FOptions[FileLayoutOptions.PN]);
-                                    ScanState = ScanStates.SerialisingData;
-                                    Conv.Serialise(FStream, FStructure);
-                                    ScanState = ScanStates.Finished;
-                                }
-
-                                break;
-                            }
-                            case 'A':
-                            case 'a':
-                            {
-                                using 
-                                (
-                                    FileStream FStream = File.Create
-                                    (Path.Combine(CurrentPath, $"FileList{DateTime.Now.Date.ToString("dd-MM-YYYY")}.txt"))
-                                )
-                                {
-                                    Conv.AddData(Temp, FOptions[FileLayoutOptions.PN]);
-                                    ScanState = ScanStates.SerialisingData;
-                                    Conv.Serialise(FStream, FStructure);
-                                    ScanState = ScanStates.Finished;
-                                }
-
-                                break;
-                            }
-                            case 'c':
-                            case 'C':
-                            {return;}
-                            default:
-                            {
-                                Console.WriteLine("Please enter a valid option");
-                                TempInputValid = false;
-                                break;
-                            }
+                            CreateFile(Temp, false);
+                            break;
                         }
-                    } while (TempInputValid);
-                }
-            //});
+                        case 'N':
+                        case 'n':
+                        {
+                            CreateFile(Temp, true);
+                            break;
+                        }
+                        case 'c':
+                        case 'C':
+                        {return;}
+                        default:
+                        {
+                            Console.WriteLine("Please enter a valid option");
+                            TempInputValid = false;
+                            break;
+                        }
+                    }
+                } while (!TempInputValid);
+            }
+            else
+            {CreateFile(Temp, false);}
         }
 
-        public static void GetArguments(string[] _Args)
+        private static void CreateFile(object _Temp, bool _IncludeDate)
+        {
+            string StrPath = string.Empty;
+
+            if (_IncludeDate)
+            {StrPath = Path.Combine(CurrentPath, $"FileList{DateTime.Now.Date.ToString("dd-MM-YYYY")}.txt");}
+            else
+            {StrPath = Path.Combine(CurrentPath, "FileList.txt");}
+
+            using (FileStream FStream = File.Create(StrPath))
+            {
+                Conv.AddData(_Temp, FOptions[FileLayoutOptions.PN]);
+                ScanState = ScanStates.SerialisingData;
+                Conv.Serialise(FStream, FStructure);
+                ScanState = ScanStates.Finished;
+                FStream.Close();
+            }
+        }
+
+        private static void GetArguments(string[] _Args)
         {
             bool FSDone = false; //makes sure that File Structure can only be set once
 
@@ -209,7 +218,7 @@ namespace FileLister
             }
         }
 
-        public static List<FileInfo> GetFiles(SearchOption _SO)
+        private static List<FileInfo> GetFiles(SearchOption _SO)
         {//Program closes here "exited with code 3221225477 (0xc0000005) 'Access violation'."
             Debug.WriteLine("Hmm?");
 
@@ -223,7 +232,7 @@ namespace FileLister
             return TempFiles;
         }
 
-        public static List<(string, string)> GetPN(List<FileInfo> _Files)
+        private static List<(string, string)> GetPN(List<FileInfo> _Files)
         {
             List<(string, string)> Temp = new List<(string, string)>();
 
@@ -233,14 +242,14 @@ namespace FileLister
             return Temp;
         }
 
-        public static string GetPath(string _FullPath)
+        private static string GetPath(string _FullPath)
         {
-            int Position = _FullPath.LastIndexOf('/');
+            int Position = _FullPath.LastIndexOf("\\");
 
             return _FullPath.Substring(0, Position);
         }
 
-        public static List<string> GetFileData(List<FileInfo> _Files)
+        private static List<string> GetFileData(List<FileInfo> _Files)
         {
             List<string> Temp = new List<string>();
 

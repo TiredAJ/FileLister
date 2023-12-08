@@ -32,6 +32,7 @@ namespace FileLister
         static private FileStructure FStructure = FileStructure.PT;
         static private SearchOption SOption = SearchOption.TopDirectoryOnly;
         static private Converter Conv;
+        static private List<string> FileTypes = new List<string>();
         #endregion
 
         public static void Main(string[] args)
@@ -223,17 +224,33 @@ namespace FileLister
                         }
                     }
                 }
+                else
+                {
+                    string Temp = arg.Trim('\"');
+
+                    FileTypes = Temp.Split(' ').ToList();
+                }
             }
         }
 
         private static List<FileInfo> GetFiles(SearchOption _SO)
-        {//Program closes here "exited with code 3221225477 (0xc0000005) 'Access violation'."
+        {
             Debug.WriteLine("Hmm?");
 
             List<FileInfo> TempFiles = new List<FileInfo>();
 
             try
-            { TempFiles = new DirectoryInfo(CurrentPath).GetFiles("", _SO).ToList<FileInfo>(); }
+            {
+                if (FileTypes.Count <= 0)
+                {TempFiles = new DirectoryInfo(CurrentPath).GetFiles("", _SO).ToList<FileInfo>();}
+                else
+                {
+                    TempFiles = new DirectoryInfo(CurrentPath).GetFiles("", _SO)
+                                        .Where(X => FileTypes.Contains(Path.GetExtension(X.Name)))
+                                        .ToList();
+                }
+            
+            }
             catch (Exception EXC)
             { Console.WriteLine(EXC.Message); }
 
